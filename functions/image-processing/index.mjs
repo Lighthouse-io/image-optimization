@@ -43,7 +43,7 @@ export const handler = async (event) => {
     // execute the requested operations
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')))
     // variable holding the server timing header value
-    var timingLog = 'img-downloaddur=' + parseInt(performance.now() - startTime)
+    var timingLog = 'img-download;dur=' + parseInt(performance.now() - startTime)
     startTime = performance.now()
     try {
         // check if resizing is requested
@@ -82,7 +82,7 @@ export const handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error transforming image', error)
     }
-    timingLog = timingLog + ',img-transformdur=' + parseInt(performance.now() - startTime)
+    timingLog = timingLog + ',img-transform;dur=' + parseInt(performance.now() - startTime)
 
     // handle gracefully generated images bigger than a specified limit (e.g. Lambda output object limit)
     const imageTooBig = Buffer.byteLength(transformedImage) > MAX_IMAGE_SIZE
@@ -99,7 +99,7 @@ export const handler = async (event) => {
                 CacheControl: TRANSFORMED_IMAGE_CACHE_TTL,
             })
             await s3Client.send(putImageCommand)
-            timingLog = timingLog + ',img-uploaddur=' + parseInt(performance.now() - startTime)
+            timingLog = timingLog + ',img-upload;dur=' + parseInt(performance.now() - startTime)
             // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
             if (imageTooBig) {
                 return {

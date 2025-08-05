@@ -31,9 +31,6 @@ export class ImageOptimizationStack extends Stack {
     // Parameters of transformed images
     const S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400'
 
-    // Whether to deploy a sample website referenced in https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
-    const DEPLOY_SAMPLE_WEBSITE = 'false'
-
     const S3_IMAGE_BUCKET_NAME = process.env.S3_IMAGE_BUCKET_NAME
     if(!S3_IMAGE_BUCKET_NAME) {
       throw new Error('S3_IMAGE_BUCKET_NAME environment variable is not set.')
@@ -196,5 +193,35 @@ export class ImageOptimizationStack extends Stack {
       description: 'Domain name of image delivery',
       value: imageDelivery.distributionDomainName
     })
+
+    // Whether to deploy a sample website referenced in https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
+    const DEPLOY_SAMPLE_WEBSITE = 'true'
+    if (DEPLOY_SAMPLE_WEBSITE === 'true') {
+      var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
+        removalPolicy: RemovalPolicy.DESTROY,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        enforceSSL: true,
+        autoDeleteObjects: true,
+      });
+
+      var sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
+        comment: 'image optimization - sample website',
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          origin: new origins.S3Origin(sampleWebsiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        }
+      });
+
+      new CfnOutput(this, 'SampleWebsiteDomain', {
+        description: 'Sample website domain',
+        value: sampleWebsiteDelivery.distributionDomainName
+      });
+      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
+        description: 'S3 bucket use by the sample website',
+        value: sampleWebsiteBucket.bucketName
+      });
+    }
   }
 }
